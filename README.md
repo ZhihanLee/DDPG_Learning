@@ -1,6 +1,9 @@
 # DDPG_Learning
 A study code for eco-driving using DDPG algorithm
 
+However, the model of HEV is sucked :(
+Don't trust it!
+
 Reference:
 
 BIT DRL-EMS for Prius by Lian etc.
