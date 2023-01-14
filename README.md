@@ -2,7 +2,7 @@
 A study code for eco-driving using DDPG algorithm
 
 However, the model of HEV is sucked :(
-Don't trust it!
+Do not trust it!
 
 Reference:
 
