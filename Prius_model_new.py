@@ -252,17 +252,6 @@ class Prius_model():
             omega_list[2] = self.Pgs_K * car_spd/self.Wheel_R # 电机速度依然服从车速
             omega_list[0] = (omega_list[1] + omega_list[2] * self.Pgs_R/self.Pgs_S) / (1 + self.Pgs_R/self.Pgs_S) # 最后一项服从行星系
             inf_gen = 1
-            # print("Gen-spd error")
-
-        # 上面如果三个条件被碰到了 要相应记录给变量inf，然后输出到I
-
-        # # ######################调试####################################
-        # print("==================================")
-        # print("car_spd_ini",car_spd_ini)
-        # print("car_a",car_a)
-        # print("t",t)
-        # print("car_spd",car_spd)
-        # print("error:", inf_eng, inf_gen, inf_mot)
 
         # 求步长内角速度均值
         Eng_spd = (Eng_spd_ini + omega_list[0])/2
@@ -287,104 +276,11 @@ class Prius_model():
         Gen_pwr = (Gen_trq * Gen_spd <= 0) * Gen_spd * Gen_trq * Gen_eta + (Gen_trq * Gen_spd > 0) * Gen_spd * Gen_trq / Gen_eta # 他这里约定是功率为负，则说明在发电，冲到电池的能量要乘以效率；反之在用电，消耗电池的能量要除以效率
         Gen_pwr = np.array(Gen_pwr, dtype='float64')
 
-        # 求输出功率看看 7.27
         P_out = (Eng_trq * omega_list[0] *30/math.pi + Gen_trq * omega_list[1]*30/math.pi + Mot_trq * omega_list[2]*30/math.pi)/9550  # kW
 
-
-        # # Engine  
-        # if Eng_pwr_opt > 56000:
-        #     Eng_pwr_opt = 56000
-        
-        # if (Eng_pwr_opt < 500) or (T < 0):    
-        #     Eng_pwr_opt = 0  
-            
-        # Eng_spd = self.Eng_pwr_func(Eng_pwr_opt)                                                             # 拟合的功率函数求出功率对应的发动机转速 发动机转速此处角速度
-        # Eng_trq = Eng_pwr_opt / Eng_spd                                                                      # 从发动机转速求发动机转矩
-        
-        # # The minimum power of engine and braking energy recovery    
-        # if (Eng_pwr_opt < 500) or (T < 0):
-        #     Eng_trq = 0
-        #     Eng_spd = 0
-            
-        # Eng_fuel_mdot = self.Eng_fuel_func(Eng_trq, Eng_spd)
-        # # maximum engine torque boundary (Nm)
-        # Eng_trq_max = np.polyval(self.Eng_trq_maxP, Eng_spd)                                                 # polyval以多项式系数（降幂排列），自变量为参数 返回自变量在该系数下的函数值
-        # # engine power consumption
-        # Eng_pwr = Eng_fuel_mdot * 42600
-        # inf_eng = (Eng_trq > Eng_trq_max)                                                                    # 标志位，如果发动机转矩超过最大转矩 置为1 惩罚了应该是
-        
-        # F_pgs = (Eng_trq / (self.Pgs_R + self.Pgs_S))                                                         # 物理意义是齿圈上的力（行星系耦合侧） 为啥这么求不知道
-        # # motor rotating speed and torque
-        # Mot_spd = self.Pgs_K * Wheel_spd                                                                      # 齿圈角速度 这里直接等于电机角速度了
-        # Mot_trq = T / self.Pgs_K - F_pgs * self.Pgs_R                                                         # 电机转矩 = 齿圈上合转矩 - 行星齿轮转矩（ = 啮合力*齿圈半径 这里公式不对）
-        # Mot_trq = (Mot_trq < 0) * (Mot_trq < self.Mot_trq_min_func(Mot_spd)) * self.Mot_trq_min_func(Mot_spd) +\
-        #           (Mot_trq < 0) * (Mot_trq > self.Mot_trq_min_func(Mot_spd)) * Mot_trq +\
-        #           (Mot_trq >= 0) * (Mot_trq > self.Mot_trq_max_func(Mot_spd)) * self.Mot_trq_max_func(Mot_spd) +\
-        #           (Mot_trq >= 0) * (Mot_trq < self.Mot_trq_max_func(Mot_spd)) * Mot_trq                       # 分类讨论 转矩小于最小转矩要求 按最小转矩曲线给转矩；转矩大于最大转矩约束同理；否则夹在中间的就正常输出
-        
-        # Mot_trq = np.array(Mot_trq).flatten()                                                                 # flatten()将一个numpy.array对象折叠成一个一维数组
-        # Mot_eta = (Mot_spd == 0) + (Mot_spd != 0) * self.Mot_eta_map_func(Mot_trq, Mot_spd * np.ones(1)) #need to edit        
-        # inf_mot = (np.isnan(Mot_eta)) + (Mot_trq < 0) * (Mot_trq < self.Mot_trq_min_func(Mot_spd)) + (Mot_trq >= 0) * (Mot_trq > self.Mot_trq_max_func(Mot_spd))                  # np.isnan 用于判断空值
-        # Mot_eta[np.isnan(Mot_eta)] = 1        
-        # # Calculate motor power output
-        # Mot_pwr_output = Mot_trq * Mot_spd                                                                    # 实际输出功率，用来计算轮上后备功率
-        # # Calculate electric power consumption
-        # Mot_pwr = (Mot_trq * Mot_spd <= 0) * Mot_spd * Mot_trq * Mot_eta + (Mot_trq * Mot_spd > 0) * Mot_spd * Mot_trq / Mot_eta # 分类讨论 电机功率输出为负，乘以效率； 电机功率输出为正，则实际电机上功率要除以效率
-        
-        # # genertor rotating speed and torque 
-        # Gen_spd = (Eng_spd * (self.Pgs_R + self.Pgs_S) - Mot_spd * self.Pgs_R ) / self.Pgs_S                  # 直接让太阳轮角速度等于发电机角速度->求太阳轮线速度->行星轮线速度-齿圈上的线速度（行星轮线速度求法不明白） 
-        # Gen_trq = - F_pgs * self.Pgs_S                                                                        # F_pgs为齿圈上的力，亦行星轮啮合力，亦即太阳轮上的力的相反数
-        # Gen_eta = (Gen_spd == 0) + (Gen_spd != 0) * self.Gen_eta_map_func(Gen_trq, Gen_spd)
-        # inf_gen = (np.isnan(Gen_eta)) + (Gen_trq < 0) * (Gen_trq < self.Gen_trq_min_func(Gen_spd)) + (Gen_trq >= 0) * (Gen_trq > self.Gen_trq_max_func(Gen_spd))                  # inf量用来惩罚转矩越界的情况吗 不清楚
-        # Gen_eta[np.isnan(Gen_eta)] = 1
-        # # Calculate generator power output
-        # Gen_pwr_output = Gen_trq * Gen_spd
-        # # Calculate electric power consumption
-        # Gen_pwr = (Gen_trq * Gen_spd <= 0) * Gen_spd * Gen_trq * Gen_eta + (Gen_trq * Gen_spd > 0) * Gen_spd * Gen_trq / Gen_eta    # 注意到发电机转矩约定为负，故发电机功率为负 说明在充电 实际输出要乘以效率；反之 除以效率
-
-################## 电池，先不要#########################
         SOC_new = 0.65
         delta_SOC = SOC_new - SOC
-        Batt_pwr = Mot_pwr + Gen_pwr 
-
-    #     inf_soc = 0
-    #     Batt_vol = self.Batt_vol_func(SOC)                                                                    # 根据当前SOC和拟合结果 输出SOC对应的开环输出电压
-    #     if SOC <= 0.1:
-    #         Batt_vol = 0
-    #         inf_soc = 1
-    #     Batt_pwr = Mot_pwr + Gen_pwr                                                                          # 电池功率:大于0放电，小于0充电
-    #     Batt_rint = (Batt_pwr > 0) * self.Batt_rint_dis_list_func(SOC) + (Batt_pwr <= 0) * self.Batt_rint_chg_list_func(SOC)
-
-    #     #columbic efficiency (0.9 when charging)
-    #     Batt_eta = (Batt_pwr > 0) + (Batt_pwr <= 0) * 0.9
-    #     Batt_I_max = (Batt_pwr > 0) * self.Batt_I_max_dis + (Batt_pwr <= 0) * self.Batt_I_max_chg
-        
-    #     # the limitation of Batt_pwr
-    #     inf_batt_one = (Batt_vol ** 2 < 4 * Batt_rint * Batt_pwr)                                             # 等效电路模型求电流 此处验证电流非复数 如果是复数 inf项置为1
-    #     if Batt_vol ** 2 < 4 * Batt_rint * Batt_pwr:
-    # #        Eng_pwr = Eng_pwr + Batt_pwr - Batt_vol ** 2 / (4 * Batt_rint)    
-    # #        Eng_trq = Eng_pwr / Eng_spd       
-    #         Batt_pwr = Mot_pwr - Batt_vol ** 2 / (4 * Batt_rint)                                              # 此处电流为复数 替换公式机理不明
-    #         Batt_I = Batt_eta * Batt_vol / (2 * Batt_rint)
-    # #        print('battery power is out of bound')
-    #     else:          
-    #         Batt_I = Batt_eta * (Batt_vol - np.sqrt(Batt_vol ** 2 - 4 * Batt_rint * Batt_pwr)) / 0.8
-               
-    #     inf_batt = inf_batt_one + (np.abs(Batt_I) > Batt_I_max)                                               # 总电池约束，电流非复 且 低于超过最大电流
-           
-    #     # New battery state of charge
-    #     SOC_new = - Batt_I / self.Batt_Q + SOC   
-    #     # Set new state of charge to real values
-    #     SOC_new = (np.conjugate(SOC_new) + SOC_new) / 2                                                       # np.conjugate返回了输入矩阵的共轭矩阵 本步骤消去可能存在的虚部（来自电流公式）
-    #     # 计算SOC变化
-    #     delta_SOC = SOC_new - SOC
-        
-    #     if SOC_new > 1:
-    #         SOC_new = 1.0
-        
-################## 电池，先不要#########################
-
-        # P_out = Eng_pwr_opt + Batt_pwr                                                                        # 记录电池和发动机总能耗                                                  
+        Batt_pwr = Mot_pwr + Gen_pwr                                               
         
         # Cost
         #I = (inf_batt + inf_eng + inf_mot + inf_gen != 0)                                                                              # 我也不知掉他是干啥的，先注释了
